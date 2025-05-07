@@ -1,0 +1,30 @@
+#!/bin/bash
+#
+#SBATCH --job-name=grasp_inf               # job name
+#SBATCH --output=logs/%x_%j.out            # STDOUT → logs/grasp_inf_<jobid>.out
+#SBATCH --error=logs/%x_%j.err             # STDERR → logs/grasp_inf_<jobid>.err
+#SBATCH --nodes=1                          # single node
+#SBATCH --ntasks=1                         # one SLURM task—torchrun will spawn 8 processes
+#SBATCH --gres=gpu:rtx_3090:8                       # request 8 GPUs
+#SBATCH --cpus-per-task=32                 # total CPU cores for all dataloader workers
+#SBATCH --mem=64G                          # total RAM
+#SBATCH --time=3:00:00                    # hh:mm:ss
+#SBATCH --account=pvl                    # cluster partition (adjust if needed)
+source ~/.bashrc
+
+cd /n/fs/pvl-franka/dg9272/GelSense
+conda activate gelsense                    # activate conda env
+mkdir -p logs
+
+# launch via torchrun (one SLURM task, spawns 8 processes under the hood)
+torchrun \
+  --nproc_per_node=8 \
+  GraspInf/train_grasp_inf.py \
+    --data-dir /n/fs/pvl-franka/dg9272/GelSense/h5 \
+    --ckpt-dir ./checkpoints/gel_sense_gel_only \
+    --wandb-project grasp_inf \
+    --wandb-run-name gel_sense_gel_only \
+    --epochs 20 \
+    --batch-size 32 \
+    --lr 1e-4 \
+    --num-workers 4
